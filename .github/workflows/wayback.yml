@@ -1,0 +1,34 @@
+name: Wayback Unique Paths Query
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "The domain to query (e.g., example.com)"
+        required: true
+        default: "example.com"
+
+jobs:
+  wayback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Wayback Query
+        run: |
+          python query.py "${{ github.event.inputs.domain }}"
+
+      - name: Upload result file
+        uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: result/
