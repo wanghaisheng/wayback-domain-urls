@@ -1,0 +1,68 @@
+name: Query Wayback URLs
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Enter the domain to query (e.g., example.com)"
+        required: true
+        type: string
+
+jobs:
+  wayback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Query Wayback and save to file
+        run: |
+          mkdir -p result
+
+          DOMAIN="${{ github.event.inputs.domain }}"
+          SAFE_NAME=$(echo "$DOMAIN" | sed 's/[^a-zA-Z0-9]/_/g')
+          OUT_FILE="result/${SAFE_NAME}.txt"
+
+          echo "Querying $DOMAIN ..."
+          python3 <<EOF
+import requests
+import urllib.parse
+
+domain = "${{ github.event.inputs.domain }}"
+url = f"https://web.archive.org/cdx/search/cdx"
+params = {
+    "url": f"{domain}/*",
+    "output": "json",
+    "fl": "original",
+    "collapse": "urlkey",
+    "limit": "10000"
+}
+
+resp = requests.get(url, params=params)
+data = resp.json()[1:]  # skip header
+path_set = set()
+
+for [full_url] in data:
+    parsed = urllib.parse.urlparse(full_url)
+    path = parsed.path
+    if path:
+        path_set.add(path)
+
+with open("result/${SAFE_NAME}.txt", "w") as f:
+    for path in sorted(path_set):
+        f.write(path + "\\n")
+EOF
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayback-paths
+          path: result/
