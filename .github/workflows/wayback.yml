@@ -25,7 +25,7 @@ jobs:
 
       - name: Run Wayback Query
         run: |
-          python query.py "${{ github.event.inputs.domain }}"
+          python scripts/wayback-query.py "${{ github.event.inputs.domain }}"
 
       - name: Upload result file
         uses: actions/upload-artifact@v4
